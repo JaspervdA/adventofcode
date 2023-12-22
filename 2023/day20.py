@@ -1,6 +1,5 @@
 from aocd import get_data, submit
 import copy
-import math
 
 year, day = 2023, 20
 data = get_data(year=year, day=day).splitlines()
@@ -50,19 +49,7 @@ def pushButton(iteration, low_pulse_count):
     # print(f"Pushing the button, iteration {iteration+1}")
     return [["broadcaster", 0, item] for item in broadcaster_items], low_pulse_count  + 1
 
-def checkIfCycleCompleted():
-    for initial_flipflop, flipflop in zip(initial_flipflop_state.values(), flipflops.values()):
-        if initial_flipflop != flipflop:
-            return False
-    for initial_conjunction, conjunction in zip(initial_conjunction_state.values(), conjunctions.values()):
-        if initial_conjunction != conjunction:
-            return False
-    return True
-
-initial_conjunction_state = copy.deepcopy(conjunctions)
-initial_flipflop_state = copy.deepcopy(flipflops)
-
-total_button_pushes = 100000
+total_button_pushes = 1000
 low_pulse_counts, high_pulse_counts = 0, 0
 all_rx_inputs_found = False
 rx_inputs = ["nd", "pc", "vd", "tx"]
@@ -98,11 +85,8 @@ for i in range(total_button_pushes):
     low_pulse_counts += low_pulse_count
     high_pulse_counts += high_pulse_count
 
-    if checkIfCycleCompleted():
-        cycle_length = i + 1
-        # break
-
 answerA = low_pulse_counts * high_pulse_counts
+print("Answer A is", answerA)
 # submit(answerA, part="a", day=day, year=year)
 
 ### Part B ###
@@ -112,5 +96,4 @@ print(rx_inputs_found_iteration)
 answerB = 221453937522197
 
 print("Answer B is", answerB)
-
-submit(answerB, part="b", day=day, year=year)
+# submit(answerB, part="b", day=day, year=year)
