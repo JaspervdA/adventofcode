@@ -1,6 +1,6 @@
 from aocd import get_data, submit
 import time
-import copy
+import sys
 
 year, day = 2023, 23
 data = """#.#####################
@@ -26,7 +26,7 @@ data = """#.#####################
 #.###.###.#.###.#.#v###
 #.....###...###...#...#
 #####################.#""".split("\n")
-# data = get_data(year=year, day=day).splitlines()
+data = get_data(year=year, day=day).splitlines()
 grid_size = len(data)
 hiking_map = [[None for x in range(grid_size)] for y in range(grid_size)]
 for y, row in enumerate(data):
@@ -39,97 +39,83 @@ for y, row in enumerate(data):
         else:
             hiking_map[x][y] = col
 
-threshold = 1
-def getNextPositions(current_position, seen_positions, hike_length):
-    x, y, next_positions, next_seen_positions, next_hike_lengths = current_position[0], current_position[1], [], [], []
-    # Try moving left if we are not at the edge and position not seen before
-    new_seen_positions = copy.deepcopy(seen_positions)
-    new_seen_positions[x][y] = True
+def getPossiblePositions(x, y, seen_positions, last_position):
+    possible_positions, next_positions = [], []
+    # Check if left is possible
     if x > 0:
         next_x, next_y = x-1, y
-        if not seen_positions[next_x][next_y]:
-            if hiking_map[next_x][next_y] == "<":
-                next_seen_positions.append(new_seen_positions), 
-                next_positions.append([next_x-1, next_y])
-                next_hike_lengths.append(hike_length + 2)
-            elif hiking_map[next_x][next_y] == "." and (hike_length + 1 + threshold) > longest_path_at_each_position[next_x][next_y]:
-                next_seen_positions.append(new_seen_positions)
-                next_positions.append([next_x, next_y])
-                next_hike_lengths.append(hike_length + 1)
-                if (hike_length + 1) > longest_path_at_each_position[next_x][next_y]:
-                    longest_path_at_each_position[next_x][next_y] = hike_length + 1
-     # Try moving right if we are not at the edge and position not seen before
+        next_x_y_string = f"{next_x},{next_y}"
+        if (f";{next_x_y_string};" not in seen_positions) and (next_x_y_string != last_position) and (hiking_map[next_x][next_y] == "<" or hiking_map[next_x][next_y] == "."):
+            possible_positions.append("l")
+            next_positions.append(next_x_y_string)
+    # Check if right is possible
     if x < (grid_size - 1):
         next_x, next_y = x+1, y
-        if not seen_positions[next_x][next_y]:
-            if hiking_map[next_x][next_y] == ">":
-                next_seen_positions.append(new_seen_positions)
-                next_positions.append([next_x+1, next_y])
-                next_hike_lengths.append(hike_length + 2)
-            elif hiking_map[next_x][next_y] == "." and (hike_length + 1 + threshold) > longest_path_at_each_position[next_x][next_y]:
-                next_seen_positions.append(new_seen_positions)
-                next_positions.append([next_x, next_y])
-                next_hike_lengths.append(hike_length + 1)
-                if (hike_length + 1) > longest_path_at_each_position[next_x][next_y]:
-                    longest_path_at_each_position[next_x][next_y] = hike_length + 1
-    # Try moving up if we are not at the edge and position not seen before
+        next_x_y_string = f"{next_x},{next_y}"
+        if (f";{next_x_y_string};" not in seen_positions) and (next_x_y_string != last_position) and (hiking_map[next_x][next_y] == ">" or hiking_map[next_x][next_y] == "."):
+            possible_positions.append("r")
+            next_positions.append(next_x_y_string)
+    # Check if up is possible
     if y > 0:
         next_x, next_y = x, y-1
-        if not seen_positions[next_x][next_y]:
-            if hiking_map[next_x][next_y] == "^":
-                next_seen_positions.append(new_seen_positions)
-                next_positions.append([next_x, next_y -1])
-                next_hike_lengths.append(hike_length + 2)
-            elif hiking_map[next_x][next_y] == "." and (hike_length + 1 + threshold) > longest_path_at_each_position[next_x][next_y]:
-                next_seen_positions.append(new_seen_positions)
-                next_positions.append([next_x, next_y])
-                next_hike_lengths.append(hike_length + 1)
-                if (hike_length + 1) > longest_path_at_each_position[next_x][next_y]:
-                    longest_path_at_each_position[next_x][next_y] = hike_length + 1
-     # Try moving down if we are not at the edge and position not seen before
+        next_x_y_string = f"{next_x},{next_y}"
+        if (f";{next_x_y_string};" not in seen_positions) and (next_x_y_string != last_position) and (hiking_map[next_x][next_y] == "^" or hiking_map[next_x][next_y] == "."):
+            possible_positions.append("u")
+            next_positions.append(next_x_y_string)
+    # Check if down is possible
     if y < (grid_size - 1):
         next_x, next_y = x, y+1
-        if not seen_positions[next_x][next_y]:
-            if hiking_map[next_x][next_y] == "v":
-                next_seen_positions.append(new_seen_positions)
-                next_positions.append([next_x, next_y+1])
-                next_hike_lengths.append(hike_length + 2)
-            elif hiking_map[next_x][next_y] == "." and (hike_length + 1 + threshold) > longest_path_at_each_position[next_x][next_y]:
-                next_positions.append([next_x, next_y])
-                next_seen_positions.append(new_seen_positions)
-                next_hike_lengths.append(hike_length + 1)
-                if (hike_length + 1) > longest_path_at_each_position[next_x][next_y]:
-                    longest_path_at_each_position[next_x][next_y] = hike_length + 1
+        next_x_y_string = f"{next_x},{next_y}"
+        if (f";{next_x_y_string};" not in seen_positions) and (next_x_y_string != last_position) and (hiking_map[next_x][next_y] == "v" or hiking_map[next_x][next_y] == "."):
+            possible_positions.append("d")
+            next_positions.append(next_x_y_string)
+    return possible_positions, next_positions
 
-    return next_positions, next_seen_positions, next_hike_lengths
+def getNextPositions(loop_item):
+    current_position, seen_positions, hike_length, last_position = loop_item[0], loop_item[1], loop_item[2], loop_item[3]
+    next_loop_items, next_hike_lengths = [], []
+    x,y = current_position.split(',')
+    x, y = int(x), int(y)
+    possible_positions, next_positions = getPossiblePositions(x, y, seen_positions, last_position)
+    num_possible_positions = len(possible_positions)
+    if num_possible_positions == 0:
+        return []
+    elif num_possible_positions == 1:
+        next_loop_items = [[None, seen_positions, hike_length+1, current_position]]
+    else:
+        next_loop_items = [[None, f"{seen_positions}{x},{y};", hike_length+1, current_position] for i in range(num_possible_positions)]
 
-current_position_list, current_hike_lengths = [[1,0]], [0]
-current_seen_positions_list = [[[False for x in range(grid_size)] for y in range(grid_size)]]
-total_hike_lengths, step = [], 0
-longest_path_at_each_position = [[0 for x in range(grid_size)] for y in range(grid_size)]
+    for loop_item, next_position in zip(next_loop_items, next_positions):
+        loop_item[0] = next_position
+
+    return next_loop_items
+
+# Loop data is current_position, seen_positions, hike_length, last_position
+current_loop_data = [['1,0', ';', 0, '0,0']]
+total_hike_lengths, step, end_position = [], 0, f"{grid_size - 2},{grid_size - 1}"
 t_start = time.time()
-while len(current_position_list) > 0:
-# for i in range(800):
+while len(current_loop_data) > 0:
     step +=1
-    # step = i
     print("Step", step)
-    new_current_positions, new_seen_positions, new_hike_lengths = [], [], []
+    new_loop_data = []
     t_last_it = time.time()
-    for current_position, seen_positions, hike_length in zip(current_position_list, current_seen_positions_list, current_hike_lengths):
-        if current_position == [grid_size - 2, grid_size - 1]:    
-            total_hike_lengths.append(hike_length)
+    for loop_item in current_loop_data:
+        if loop_item[0] == end_position:    
+            total_hike_lengths.append(loop_item[2])
+            del loop_item
         else:
-            # print("current position", current_position)
-            next_positions, next_seen_positions, next_hike_lengths = getNextPositions(current_position, seen_positions, hike_length)
-            new_current_positions.extend(next_positions), new_seen_positions.extend(next_seen_positions), new_hike_lengths.extend(next_hike_lengths)
+            next_loop_data = getNextPositions(loop_item)
+            if len(next_loop_data) > 0:
+                new_loop_data.extend(next_loop_data)
+            else:
+                del next_loop_data, loop_item
 
-    current_position_list, current_seen_positions_list, current_hike_lengths = new_current_positions, new_seen_positions, new_hike_lengths
-    print("Number of positions", len(current_position_list))
+    current_loop_data = new_loop_data
+    print("Number of positions", len(current_loop_data))
     print("Iteration time", time.time() - t_last_it)
 
-
 print("Total loop time", time.time() - t_start)
-print("Hike lengths", total_hike_lengths)
+# print("Hike lengths", total_hike_lengths)
 answerA = max(total_hike_lengths)
 print("Answer A is", answerA)
 # submit(answerA, part="a", day=day, year=year)
@@ -137,6 +123,6 @@ print("Answer A is", answerA)
 ### Part B ###
 
 # Write your code here
-# answerB = 
-
+# answerB = 5314
+#  5314 is too low!!
 # submit(answerB, part="b", day=day, year=year)
