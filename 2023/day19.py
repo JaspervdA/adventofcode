@@ -1,4 +1,6 @@
 from aocd import get_data, submit
+import copy 
+import math
 
 year, day = 2023, 19
 
@@ -94,11 +96,8 @@ for rating in ratings:
     while go_to_next_worflow:
         seen_workflows.append(current_workflow)
         new_workflow, go_to_next_worflow, part_accepted = doWorkflow(current_workflow, rating)
-        
-        # This handles the case if a workflow was already visited
         if new_workflow in seen_workflows:
             go_to_next_worflow, part_accepted = False, False
-        #  This handles the case if there is an R or A after the rule, i.e. a>1716:R
         if new_workflow == "A":
             go_to_next_worflow, part_accepted = False, True
         elif new_workflow == "R":
@@ -110,24 +109,105 @@ for rating in ratings:
 
 total_sum = sum(accepted_part_sums)
 answerA = total_sum
-print("Answer A is", answerA)
-submit(answerA, part="a", day=day, year=year)
+# print("Answer A is", answerA)
+# submit(answerA, part="a", day=day, year=year)
 
 ### Part B ###
 
+def getNextWorkflows(workflow):
+    conditionals, next_workflows = [], []
+    for item in workflow:
+        if item.find(":") > -1:
+            conditional, next_workflow = item.split(":")
+        else:
+            conditional, next_workflow = '', item
+        next_workflows.append(next_workflow)
+        conditionals.append(conditional)
+    return conditionals, next_workflows
 
-# String all conditions together, for instance we could get s<1351, a<2006, x<1416:A
+def getNotConditional(conditional):
+    if conditional.find(">") > -1:
+        letter, threshold = conditional.split(">")
+        not_conditional = f"{letter}<{int(threshold)+1}"
+    elif conditional.find("<") > -1:
+        letter, threshold = conditional.split("<")
+        not_conditional = f"{letter}>{int(threshold)-1}"
+    return not_conditional
 
-# To string together, loop over the combined workflows. Start at in
-# Subsitute the result part after : 
-# loop over the new combined workflows
+def lettersInString(conditional_string):
+    evaluate_string, letters = copy.deepcopy(conditional_string), []
+    if (evaluate_string.find("x") > -1): letters.append("x")
+    if (evaluate_string.find("m") > -1): letters.append("m")
+    if (evaluate_string.find("s") > -1): letters.append("s")
+    if (evaluate_string.replace("and", " ").find("a") > -1): letters.append("a")
+    return letters
 
-# Get the min and max condition, min is where there is a > operator, max is where there is a < operator
+def applyConditionals(workflow_conditional, new_conditionals, new_workflows):
+    not_conditional, next_workflow_conditionals, next_accept_conditionals, next_reject_conditionals = "", [], [], []
+    
+    for new_conditional, new_workflow in zip(new_conditionals, new_workflows):
+        current_conditional = workflow_conditional['conditional']
+        if len(new_conditional) > 0:
+            next_conditional = current_conditional + " and " + new_conditional if len(current_conditional) > 0 else new_conditional
+            next_plus_not_conditional = next_conditional + " and " + not_conditional if len(not_conditional) > 0 else next_conditional
+            if new_workflow == "A":
+                next_accept_conditionals.append(next_plus_not_conditional)    
+            elif new_workflow == "R":
+                next_reject_conditionals.append(next_plus_not_conditional)
+            else:
+                #This is the case if we go to a new workflow but with an extra conditional
+                next_workflow_conditionals.append({'workflow': new_workflow, 'conditional': next_plus_not_conditional})
+            next_not_conditional = getNotConditional(new_conditional)
+            not_conditional = not_conditional + " and " + next_not_conditional if len(not_conditional) > 0 else next_not_conditional
+        else:
+            current_plus_and_conditional = current_conditional + " and " if len(current_conditional) > 0 else current_conditional
+            current_plus_not_conditional = current_plus_and_conditional + not_conditional if len(not_conditional) > 0 else current_conditional
+            if new_workflow =="A":
+                next_accept_conditionals.append(current_plus_not_conditional)    
+            elif new_workflow == "R":
+                next_reject_conditionals.append(current_plus_not_conditional)
+            else:
+                #This is the case if we go to a new workflow but without an extra conditional
+                next_workflow_conditionals.append({'workflow': new_workflow, 'conditional': current_plus_not_conditional})
 
-# Then we get the number of feasible combinations:
-# (x_max - x_min - 1 ) * (m_max - m_min - 1 ) * (a_max - a_min -1 ) * (s_max - s_min - 1 )
+    return next_workflow_conditionals, next_accept_conditionals, next_reject_conditionals
+
+# String all the conditionals together
+start_workflow_conditional = {"workflow": "in", "conditional": ""}
+current_workflow_conditionals, accept_conditionals, reject_conditionals = [start_workflow_conditional], [], []
+while len(current_workflow_conditionals) > 0:
+    new_workflow_conditionals = []
+    for workflow_conditional in current_workflow_conditionals:
+        next_conditionals, next_workflows = getNextWorkflows(workflows[workflow_conditional['workflow']])
+        next_workflow_conditionals, next_accept_conditionals, next_reject_conditionals = applyConditionals(workflow_conditional, next_conditionals, next_workflows)
+        new_workflow_conditionals.extend(next_workflow_conditionals), accept_conditionals.extend(next_accept_conditionals), reject_conditionals.extend(next_reject_conditionals)
+    current_workflow_conditionals = new_workflow_conditionals
+
+# Get the number of combinations for these conditionals
+all_num_combinations = []
+for accepted_conditional in accept_conditionals:
+    conditionals = accepted_conditional.split(' and ')
+    letters_in_string = lettersInString(accepted_conditional)
+    num_combinations, letter_conditionals = 1, []
+    for letter in letters_in_string:
+        letter_conditional, count = "", 0
+        for conditional in conditionals:
+            if conditional[0] == letter:
+                letter_conditional = letter_conditional + " and " + conditional if count > 0 else conditional
+                count += 1
+        letter_conditionals.append(letter_conditional)
+
+    letter_accepted_scores = [4000, 4000, 4000, 4000]
+    for letter_idx, (letter, letter_conditional) in enumerate(zip(letters_in_string, letter_conditionals)):
+        letter_accepted_score = 0
+        for i in range(1,4001):
+            exec(f"{letter} = {i}")
+            if eval(letter_conditional):
+                letter_accepted_score +=1
+        letter_accepted_scores[letter_idx] = letter_accepted_score
+    all_num_combinations.append(math.prod(letter_accepted_scores))
 
 # Write your code here
-# answerB = 
-
-# submit(answerB, part="b", day=day, year=year)
+answerB = sum(all_num_combinations)
+print("Answer B is", answerB)
+submit(answerB, part="b", day=day, year=year)
